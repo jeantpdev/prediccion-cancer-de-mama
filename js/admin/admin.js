@@ -61,7 +61,17 @@ const Modelo = {
       headers: config.headers,
     });
     return res;
+  },
+
+  async obtenerDatosCSV(pageSize, pageNumber) {
+    const res = await axios({
+      method: "GET",
+      url: `https://mmphzayxvvhdtrtcvjsq.supabase.co/rest/v1/datos_csv?select=*&limit=${pageSize}&offset=${(pageNumber - 1) * pageSize}`,
+      headers: config.headers,
+    });
+    return res;
   }
+  
 }
 
 const Controlador = {
@@ -108,30 +118,24 @@ const Controlador = {
   async insertarDatosCSV() {
     const { events_recurrence, age, menopause, tumor_size, inv_nodes, node_caps, deg_malig, breast, breast_quead, irradiat } = Vista.getDatosInsertarCSV();
     try {
-      const res = await Modelo.insertarDatosCSV(events_recurrence, age, menopause, tumor_size, inv_nodes, node_caps, deg_malig, breast, breast_quead, irradiat);
+      //const res = await Modelo.insertarDatosCSV(events_recurrence, age, menopause, tumor_size, inv_nodes, node_caps, deg_malig, breast, breast_quead, irradiat);
       Vista.mostrarAlertaSatisfactorio("Datos insertados correctamente");
     } catch (err) {
       Vista.mostrarMensajeError(err);
     }
   },
 
-  obtenerDatosCSV: function () {
-    const url = `https://mmphzayxvvhdtrtcvjsq.supabase.co/rest/v1/datos_csv?select=*&limit=${Controlador.pageSize}&offset=${(Controlador.pageNumber - 1) * Controlador.pageSize}`;
+  async obtenerDatosCSV() {
+    try {
+      const response = await Modelo.obtenerDatosCSV(Controlador.pageSize, Controlador.pageNumber);
+      Vista.mostrarDatosCSV(response.data);
+      const totalPages = Math.ceil(response.headers['x-total-count'] / Controlador.pageSize);
+      Vista.actualizarPaginacionCSV(totalPages);
 
-    axios({
-      method: 'GET',
-      url: url,
-      headers: config.headers,
-    })
-      .then(function (response) {
-        Vista.mostrarDatosCSV(response.data);
-        const totalPages = Math.ceil(response.headers['x-total-count'] / Controlador.pageSize);
-        Vista.actualizarPaginacionCSV(totalPages);
-      })
-      .catch(function (error) {
-        console.log(error);
-        Vista.mostrarMensajeError(error);
-      });
+    } catch (err) {
+      console.log(err);
+      Vista.mostrarMensajeError(err);
+    }
   },
 
   irAPaginaCSV: function (page) {
@@ -165,17 +169,20 @@ const Controlador = {
   async eliminarDatosCSV() {
     const { idEliminar } = Vista.getIdCSVDatosEliminar();
     try {
-      await Modelo.eliminarDatosCSV(idEliminar);
-      Vista.mostrarAlertaSatisfactorio("Datos eliminados correctamente")
-      this.obtenerDatosCSV();
+      //await Modelo.eliminarDatosCSV(idEliminar);
+      Vista.limpiarCampoIdEliminar();
+      Vista.obtenerDatosCSV();
+      Vista.mostrarAlertaSatisfactorio("Datos eliminados correctamente");
+      //this.obtenerDatosCSV();
     } catch (err) {
-      console.log(err)
+      console.log(err);
     }
   },
 
 };
 
 const Vista = {
+
   mostrarTickets: function (datos) {
     const tablaTickets = document.getElementById('tablaTickets');
     tablaTickets.innerHTML = ''; // Limpiar contenido existente
@@ -453,7 +460,6 @@ const Vista = {
 
   getIdCSVDatosEliminar: function () {
     const idEliminar = document.getElementById('idInputCSVDelete').value;
-    console.log(idEliminar);
     return { idEliminar };
   },
 
@@ -486,9 +492,10 @@ const Vista = {
     idInputCSV.value = "";
   },
 
-  limpiarCampoBuscarIdEliminar: function () {
-    idDatoCSVEliminar.value = "";
+  limpiarCampoIdEliminar: function (){
+    idInputCSVDelete.value = "";
   }
+
 };
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -670,5 +677,5 @@ botonActualizarTablaTickets.onclick = function () {
       timer: 800
     })
   }
-  
+
 }
